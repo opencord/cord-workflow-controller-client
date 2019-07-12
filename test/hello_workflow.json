@@ -1,0 +1,25 @@
+{
+    "hello_workflow": {
+        "dag": {
+            "dag_id": "hello_workflow",
+            "local_variable": "dag_hello"
+        },
+        "dependencies": {
+            "onu_event_handler": {}
+        },
+        "tasks": {
+            "onu_event_handler": {
+                "class": "XOSEventSensor",
+                "dag_id": "hello_workflow",
+                "dag": "dag_hello",
+                "key_field": "serialNumber",
+                "local_variable": "onu_event_handler",
+                "poke_interval": 5,
+                "provide_context": true,
+                "python_callable": "ONU_event",
+                "task_id": "onu_event_handler",
+                "topic": "onu.events"
+            }
+        }
+    }
+}

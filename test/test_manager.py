@@ -80,7 +80,7 @@ class TestManager(unittest.TestCase):
                     'workflow_id': workflow_id,
                     'workflow_run_id': workflow_run_id
                 }
-                manager.notify_new_workflow_run(workflow_id, workflow_run_id)
+                manager.report_new_workflow_run(workflow_id, workflow_run_id)
 
             manager.set_handlers({'kickstart': on_kickstart})
 

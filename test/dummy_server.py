@@ -27,7 +27,7 @@ from cord_workflow_controller_client.probe import GREETING
 from cord_workflow_controller_client.manager \
     import (WORKFLOW_KICKSTART,
             WORKFLOW_REGISTER, WORKFLOW_REGISTER_ESSENCE, WORKFLOW_LIST, WORKFLOW_LIST_RUN,
-            WORKFLOW_CHECK, WORKFLOW_REMOVE, WORKFLOW_REMOVE_RUN, WORKFLOW_NOTIFY_NEW_RUN)
+            WORKFLOW_CHECK, WORKFLOW_REMOVE, WORKFLOW_REMOVE_RUN, WORKFLOW_REPORT_NEW_RUN)
 from cord_workflow_controller_client.workflow_run \
     import (WORKFLOW_RUN_NOTIFY_EVENT,
             WORKFLOW_RUN_UPDATE_STATUS, WORKFLOW_RUN_COUNT_EVENTS, WORKFLOW_RUN_FETCH_EVENT)
@@ -427,7 +427,7 @@ def _handle_event_new_workflow_run(sid, body):
 
     log.info('returning a result for a new workflow run event to sid %s' % sid)
     sio.emit(
-        event=WORKFLOW_NOTIFY_NEW_RUN,
+        event=WORKFLOW_REPORT_NEW_RUN,
         data=data,
         room=sid
     )
@@ -560,7 +560,7 @@ class ServerEventHandler(socketio.namespace.Namespace):
             _handle_event_disconnect(sid)
 
         # manager
-        elif event == WORKFLOW_NOTIFY_NEW_RUN:
+        elif event == WORKFLOW_REPORT_NEW_RUN:
             _handle_event_new_workflow_run(sid, args[1])
         elif event == WORKFLOW_REGISTER_ESSENCE:
             _handle_event_workflow_reg_essence(sid, args[1])
@@ -621,6 +621,8 @@ def stop(p):
             proc.kill()
         process.kill()
         p.join()
+    except BaseException:
+        pass
     except psutil.NoSuchProcess:
         pass
 

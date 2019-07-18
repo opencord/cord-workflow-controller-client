@@ -32,6 +32,7 @@ WAIT_TIMEOUT = 10  # 10 seconds
 # controller -> manager
 GREETING = 'cord.workflow.ctlsvc.greeting'
 WORKFLOW_KICKSTART = 'cord.workflow.ctlsvc.workflow.kickstart'
+WORKFLOW_CHECK_STATE = 'cord.workflow.ctlsvc.workflow.check.state'
 
 # manager -> controller -> manager
 WORKFLOW_REGISTER = 'cord.workflow.ctlsvc.workflow.register'
@@ -41,7 +42,8 @@ WORKFLOW_LIST_RUN = 'cord.workflow.ctlsvc.workflow.run.list'
 WORKFLOW_CHECK = 'cord.workflow.ctlsvc.workflow.check'
 WORKFLOW_REMOVE = 'cord.workflow.ctlsvc.workflow.remove'
 WORKFLOW_REMOVE_RUN = 'cord.workflow.ctlsvc.workflow.run.remove'
-WORKFLOW_NOTIFY_NEW_RUN = 'cord.workflow.ctlsvc.workflow.notify_new_run'
+WORKFLOW_REPORT_NEW_RUN = 'cord.workflow.ctlsvc.workflow.report_new_run'
+WORKFLOW_REPORT_RUN_STATE = 'cord.workflow.ctlsvc.workflow.report_run_state'
 
 
 class Manager(object):
@@ -65,6 +67,7 @@ class Manager(object):
         self.sio.on('connect', self.__on_sio_connect)
         self.sio.on('disconnect', self.__on_sio_disconnect)
         self.sio.on(WORKFLOW_KICKSTART, self.__on_kickstart_message)
+        self.sio.on(WORKFLOW_CHECK_STATE, self.__on_check_state_message)
         self.sio.on(GREETING, self.__on_greeting_message)
         self.sio.on(WORKFLOW_REGISTER, self.__on_workflow_reg_message)
         self.sio.on(WORKFLOW_REGISTER_ESSENCE, self.__on_workflow_reg_essence_message)
@@ -73,12 +76,14 @@ class Manager(object):
         self.sio.on(WORKFLOW_CHECK, self.__on_workflow_check_message)
         self.sio.on(WORKFLOW_REMOVE, self.__on_workflow_remove_message)
         self.sio.on(WORKFLOW_REMOVE_RUN, self.__on_workflow_remove_run_message)
-        self.sio.on(WORKFLOW_NOTIFY_NEW_RUN, self.__on_workflow_notify_new_run_message)
+        self.sio.on(WORKFLOW_REPORT_NEW_RUN, self.__on_workflow_report_new_run_message)
+        self.sio.on(WORKFLOW_REPORT_RUN_STATE, self.__on_workflow_report_run_state_message)
 
         self.handlers = {
             'connect': self.__noop_connect_handler,
             'disconnect': self.__noop_disconnect_handler,
-            'kickstart': self.__noop_kickstart_handler
+            'kickstart': self.__noop_kickstart_handler,
+            'check_state': self.__noop_check_state_handler
         }
 
         # key is req_id
@@ -111,6 +116,9 @@ class Manager(object):
     def __noop_kickstart_handler(self, workflow_id, workflow_run_id):
         self.logger.debug('no-op kickstart handler')
 
+    def __noop_check_state_handler(self, workflow_id, workflow_run_id):
+        self.logger.debug('no-op check-state handler')
+
     def __get_next_req_id(self):
         req_id = self.req_id
         self.req_id += 1
@@ -141,6 +149,28 @@ class Manager(object):
                 self.logger.info('calling a kickstart handler - %s' % handler)
                 handler(workflow_id, workflow_run_id)
 
+    def __on_check_state_message(self, data):
+        """
+        Handler for a check-state event
+        REQ = {
+            'workflow_id': <workflow_id>,
+            'workflow_run_id': <workflow_run_id>
+        }
+        """
+        self.logger.info('received a check-state message from the server')
+        workflow_id = data['workflow_id']
+        workflow_run_id = data['workflow_run_id']
+
+        self.logger.info(
+            'a check-state message - workflow_id (%s), workflow_run_id (%s)' %
+            (workflow_id, workflow_run_id)
+        )
+        if workflow_id and workflow_run_id:
+            handler = self.handlers['check_state']
+            if callable(handler):
+                self.logger.info('calling a check-state handler - %s' % handler)
+                handler(workflow_id, workflow_run_id)
+
     def __on_workflow_reg_message(self, data):
         self.__on_response(WORKFLOW_REGISTER, data)
 
@@ -162,8 +192,11 @@ class Manager(object):
     def __on_workflow_remove_run_message(self, data):
         self.__on_response(WORKFLOW_REMOVE_RUN, data)
 
-    def __on_workflow_notify_new_run_message(self, data):
-        self.__on_response(WORKFLOW_NOTIFY_NEW_RUN, data)
+    def __on_workflow_report_new_run_message(self, data):
+        self.__on_response(WORKFLOW_REPORT_NEW_RUN, data)
+
+    def __on_workflow_report_run_state_message(self, data):
+        self.__on_response(WORKFLOW_REPORT_RUN_STATE, data)
 
     def __check_pending_request(self, req_id):
         """
@@ -492,12 +525,12 @@ class Manager(object):
                 (workflow_id, workflow_run_id)
             )
 
-    def notify_new_workflow_run(self, workflow_id, workflow_run_id):
+    def report_new_workflow_run(self, workflow_id, workflow_run_id):
         """
-        Notify a new workflow run
+        Report a new workflow run
         """
         if workflow_id and workflow_run_id:
-            result = self.__request(WORKFLOW_NOTIFY_NEW_RUN, {
+            result = self.__request(WORKFLOW_REPORT_NEW_RUN, {
                 'workflow_id': workflow_id,
                 'workflow_run_id': workflow_run_id
             })
@@ -520,4 +553,35 @@ class Manager(object):
             raise ClientInputError(
                 'invalid arguments workflow_id (%s), workflow_run_id (%s)' %
                 (workflow_id, workflow_run_id)
+            )
+
+    def report_workflow_run_state(self, workflow_id, workflow_run_id, state):
+        """
+        Report a new workflow run
+        """
+        if workflow_id and workflow_run_id and state:
+            result = self.__request(WORKFLOW_REPORT_RUN_STATE, {
+                'workflow_id': workflow_id,
+                'workflow_run_id': workflow_run_id,
+                'state': state
+            })
+            if result['error']:
+                self.logger.error(
+                    'request (%s) failed with an error - %s' %
+                    (result['req_id'], result['message'])
+                )
+                raise ClientResponseError(
+                    'request (%s) failed with an error - %s' %
+                    (result['req_id'], result['message'])
+                )
+            else:
+                return result['result']
+        else:
+            self.logger.error(
+                'invalid arguments workflow_id (%s), workflow_run_id (%s), state (%s)' %
+                (workflow_id, workflow_run_id, state)
+            )
+            raise ClientInputError(
+                'invalid arguments workflow_id (%s), workflow_run_id (%s), state (%s)' %
+                (workflow_id, workflow_run_id, state)
             )

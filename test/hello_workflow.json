@@ -5,19 +5,18 @@
             "local_variable": "dag_hello"
         },
         "dependencies": {
-            "onu_event_handler": {}
+            "onu_event_sensor": {}
         },
         "tasks": {
-            "onu_event_handler": {
-                "class": "XOSEventSensor",
-                "dag_id": "hello_workflow",
+            "onu_event_sensor": {
+                "class": "CORDEventSensor",
+                "controller_conn_id": "local_cord_controller",
                 "dag": "dag_hello",
+                "dag_id": "hello_workflow",
                 "key_field": "serialNumber",
-                "local_variable": "onu_event_handler",
+                "local_variable": "onu_event_sensor",
                 "poke_interval": 5,
-                "provide_context": true,
-                "python_callable": "ONU_event",
-                "task_id": "onu_event_handler",
+                "task_id": "onu_event_sensor",
                 "topic": "onu.events"
             }
         }

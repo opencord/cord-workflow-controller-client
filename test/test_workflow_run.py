@@ -49,7 +49,7 @@ class TestWorkflowRun(unittest.TestCase):
         essence_path = os.path.join(code_dir, "hello_workflow.json")
         essence = read_json_file(essence_path)
         self.manager.register_workflow_essence(essence)
-        self.manager.notify_new_workflow_run('hello_workflow', 'hello_workflow_123')
+        self.manager.report_new_workflow_run('hello_workflow', 'hello_workflow_123')
 
         # wait for 2 seconds for registering a new workflow run
         time.sleep(2)
@@ -160,7 +160,7 @@ class TestWorkflowRun(unittest.TestCase):
             self.assertTrue(count_queued >= 2, 'There must be more than 2 events queued')
 
             # count_notified and count_queued may not have the same number temporarily
-            for i in range(count_notified):
+            for _ in range(count_notified):
                 notification = self.notifications.pop(0)
                 topic = notification['topic']
                 event = run.fetch_event('task123', topic)

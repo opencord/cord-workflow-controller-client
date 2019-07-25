@@ -23,7 +23,7 @@ from gevent import pywsgi
 from geventwebsocket.handler import WebSocketHandler
 from multiprocessing import Process
 from multistructlog import create_logger
-from cord_workflow_controller_client.probe import GREETING
+from cord_workflow_controller_client.probe import GREETING, EVENT_EMIT
 from cord_workflow_controller_client.manager \
     import (WORKFLOW_KICKSTART,
             WORKFLOW_REGISTER, WORKFLOW_REGISTER_ESSENCE, WORKFLOW_LIST, WORKFLOW_LIST_RUN,
@@ -545,6 +545,33 @@ def _handle_event_workflow_run_fetch_event(sid, body):
     )
 
 
+def _handle_event_emit(sid, body):
+    data = {
+        'req_id': _get_req_id(body)
+    }
+
+    if 'topic' in body and 'message' in body:
+        # workflow_id = body['workflow_id']
+        topic = body['topic']
+        message = body['message']
+
+        log.info('probe topic %s - message %s' % (topic, message))
+
+        data['error'] = False
+        data['result'] = True
+    else:
+        data['error'] = True
+        data['result'] = False
+        data['message'] = 'topic or message is not in the message body'
+
+    log.info('returning a result for event emit to sid %s' % sid)
+    sio.emit(
+        event=EVENT_EMIT,
+        data=data,
+        room=sid
+    )
+
+
 def _handle_event(event, sid, body):
     log.info('event %s - body %s (%s)' % (event, body, type(body)))
 
@@ -584,6 +611,8 @@ class ServerEventHandler(socketio.namespace.Namespace):
             _handle_event_workflow_run_count_events(sid, args[1])
         elif event == WORKFLOW_RUN_FETCH_EVENT:
             _handle_event_workflow_run_fetch_event(sid, args[1])
+        elif event == EVENT_EMIT:
+            _handle_event_emit(sid, args[1])
         else:
             _handle_event(event, args[0], args[1])
 

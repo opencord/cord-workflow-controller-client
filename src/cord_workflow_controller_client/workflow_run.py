@@ -106,7 +106,7 @@ class WorkflowRun(object):
         return req_id
 
     def __on_greeting_message(self, data):
-        self.logger.debug('received a gretting message from the server')
+        self.logger.debug('received a greeting message from the server')
 
     def __on_notify_event_message(self, data):
         """

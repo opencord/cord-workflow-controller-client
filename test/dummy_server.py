@@ -29,8 +29,7 @@ from cord_workflow_controller_client.manager \
             WORKFLOW_REGISTER, WORKFLOW_REGISTER_ESSENCE, WORKFLOW_LIST, WORKFLOW_LIST_RUN,
             WORKFLOW_CHECK, WORKFLOW_REMOVE, WORKFLOW_REMOVE_RUN, WORKFLOW_REPORT_NEW_RUN)
 from cord_workflow_controller_client.workflow_run \
-    import (WORKFLOW_RUN_NOTIFY_EVENT,
-            WORKFLOW_RUN_UPDATE_STATUS, WORKFLOW_RUN_COUNT_EVENTS, WORKFLOW_RUN_FETCH_EVENT)
+    import (WORKFLOW_RUN_NOTIFY_EVENT, WORKFLOW_RUN_COUNT_EVENTS, WORKFLOW_RUN_FETCH_EVENT)
 
 
 """
@@ -433,40 +432,6 @@ def _handle_event_new_workflow_run(sid, body):
     )
 
 
-def _handle_event_workflow_run_update_status(sid, body):
-    data = {
-        'req_id': _get_req_id(body)
-    }
-
-    if 'workflow_id' in body and 'workflow_run_id' in body and 'task_id' in body and 'status' in body:
-        # workflow_id = body['workflow_id']
-        workflow_run_id = body['workflow_run_id']
-        task_id = body['task_id']
-        status = body['status']
-
-        if workflow_run_id in workflow_runs:
-            workflow_run = workflow_runs[workflow_run_id]
-            workflow_run[task_id] = status
-
-            data['error'] = False
-            data['result'] = True
-        else:
-            data['error'] = True
-            data['result'] = False
-            data['message'] = 'cannot find workflow run'
-    else:
-        data['error'] = True
-        data['result'] = False
-        data['message'] = 'workflow_id, workflow_run_id, task_id or status is not in the message body'
-
-    log.info('returning a result for workflow run update status event to sid %s' % sid)
-    sio.emit(
-        event=WORKFLOW_RUN_UPDATE_STATUS,
-        data=data,
-        room=sid
-    )
-
-
 def _handle_event_workflow_run_count_events(sid, body):
     data = {
         'req_id': _get_req_id(body)
@@ -605,8 +570,6 @@ class ServerEventHandler(socketio.namespace.Namespace):
             _handle_event_workflow_run_remove(sid, args[1])
 
         # workflow run
-        elif event == WORKFLOW_RUN_UPDATE_STATUS:
-            _handle_event_workflow_run_update_status(sid, args[1])
         elif event == WORKFLOW_RUN_COUNT_EVENTS:
             _handle_event_workflow_run_count_events(sid, args[1])
         elif event == WORKFLOW_RUN_FETCH_EVENT:

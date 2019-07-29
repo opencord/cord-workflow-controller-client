@@ -30,7 +30,6 @@ from .errors import ClientRPCError, ClientInputError, ClientResponseError
 WAIT_TIMEOUT = 10  # 10 seconds
 
 GREETING = 'cord.workflow.ctlsvc.greeting'
-WORKFLOW_RUN_UPDATE_STATUS = 'cord.workflow.ctlsvc.workflow.run.status'
 WORKFLOW_RUN_COUNT_EVENTS = 'cord.workflow.ctlsvc.workflow.run.count'
 WORKFLOW_RUN_FETCH_EVENT = 'cord.workflow.ctlsvc.workflow.run.fetch'
 WORKFLOW_RUN_NOTIFY_EVENT = 'cord.workflow.ctlsvc.workflow.run.notify'
@@ -59,7 +58,6 @@ class WorkflowRun(object):
         self.sio.on('connect', self.__on_sio_connect)
         self.sio.on('disconnect', self.__on_sio_disconnect)
         self.sio.on(GREETING, self.__on_greeting_message)
-        self.sio.on(WORKFLOW_RUN_UPDATE_STATUS, self.__on_update_status_message)
         self.sio.on(WORKFLOW_RUN_COUNT_EVENTS, self.__on_count_events_message)
         self.sio.on(WORKFLOW_RUN_FETCH_EVENT, self.__on_fetch_event_message)
         self.sio.on(WORKFLOW_RUN_NOTIFY_EVENT, self.__on_notify_event_message)
@@ -124,9 +122,6 @@ class WorkflowRun(object):
             if callable(handler):
                 self.logger.info('calling a notify event handler - %s' % handler)
                 handler(self.workflow_id, self.workflow_run_id, topic)
-
-    def __on_update_status_message(self, data):
-        self.__on_response(WORKFLOW_RUN_UPDATE_STATUS, data)
 
     def __on_count_events_message(self, data):
         self.__on_response(WORKFLOW_RUN_COUNT_EVENTS, data)
@@ -279,38 +274,6 @@ class WorkflowRun(object):
             raise ClientInputError(
                 'invalid arguments api (%s), result (%s)' %
                 (api, json.dumps(result))
-            )
-
-    def update_status(self, task_id, status):
-        """
-        Update status of a workflow run.
-        """
-        if task_id and status:
-            result = self.__request(WORKFLOW_RUN_UPDATE_STATUS, {
-                'workflow_id': self.workflow_id,
-                'workflow_run_id': self.workflow_run_id,
-                'task_id': task_id,
-                'status': status
-            })
-            if result['error']:
-                self.logger.error(
-                    'request (%s) failed with an error - %s' %
-                    (result['req_id'], result['message'])
-                )
-                raise ClientResponseError(
-                    'request (%s) failed with an error - %s' %
-                    (result['req_id'], result['message'])
-                )
-            else:
-                return result['result']
-        else:
-            self.logger.error(
-                'invalid arguments task_id (%s) and status (%s)' %
-                (task_id, status)
-            )
-            raise ClientInputError(
-                'invalid arguments task_id (%s) and status (%s)' %
-                (task_id, status)
             )
 
     def count_events(self):
